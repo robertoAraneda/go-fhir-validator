@@ -57,7 +57,10 @@ func FhirPathValidatorMultiple(array []FhirPathPayload) (*interface{}, error) {
 		return nil, err
 	}
 
-	path := filepath.Join("node", "fhirpath_multiple.js")
+	path := filepath.Join("node/dist", "fhirpath-evaluate.js")
+
+	// print with scaped characters
+	fmt.Printf("%q\n", string(resourceJSON))
 
 	// Step 3: Execute the Node.js script
 	cmd := exec.Command("node", path, string(resourceJSON))
