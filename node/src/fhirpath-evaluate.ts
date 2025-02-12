@@ -7,10 +7,30 @@ const traceFunction = (x: unknown, label: string): void => {
     console.log(`${label}:`, JSON.stringify(x, null, 2));
 };
 
+interface Bundle {
+    constraintExpression: string;
+    data: any;
+    rootData: any;
+    constraintKey: string;
+    parentPath: string;
+    constraintHuman: string;
+    constraintSource: string;
+    constraintSeverity: string;
+}
+
+interface ResponseBundle {
+    result: boolean;
+    key: string;
+    path: string;
+    human: string;
+    source: string;
+    severity: string;
+}
+
 try {
     // Transform inputJSON to an array of objects
-    const resources: any[] = JSON.parse(inputJSON);
-    const accumulator: Array<{ result: boolean; key: string; path: string; human: string }> = [];
+    const resources: Bundle[] = JSON.parse(inputJSON);
+    const accumulator: ResponseBundle[] = [];
 
     for (const bundle of resources) {
         let result: boolean[] = [];
@@ -39,7 +59,9 @@ contained.where((('#'+id in (%resource.descendants().reference | %resource.desce
             result: result[0],
             key: bundle.constraintKey,
             path: bundle.parentPath,
-            human: bundle.constraintHuman
+            human: bundle.constraintHuman,
+            source: bundle.constraintSource,
+            severity: bundle.constraintSeverity,
         });
     }
 

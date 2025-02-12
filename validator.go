@@ -42,10 +42,10 @@ var FhirR4ResourceTypes = []string{
 	"VisionPrescription",
 }
 
-// addError appends an issue to the OperationOutcome, with optional details about the incoming value type
-func addError(outcome *OperationOutcome, code, diagnostic, location, details string) {
+// addOperationOutcome appends an issue to the OperationOutcome, with optional details about the incoming value type
+func addOperationOutcome(outcome *OperationOutcome, code, diagnostic, location, details, severity string) {
 	issue := IssueEntry{
-		Severity:    "error",
+		Severity:    severity,
 		Code:        code,
 		Diagnostics: diagnostic,
 	}
@@ -54,7 +54,7 @@ func addError(outcome *OperationOutcome, code, diagnostic, location, details str
 	}
 
 	if details != "" {
-		issue.Details = CodeableConcept{
+		issue.Details = &CodeableConcept{
 			Text: details,
 		}
 	}
@@ -79,7 +79,7 @@ func validateElements(
 	// Use index-based iteration to prevent range aliasing issues
 	for i := 0; i < len(elements); i++ {
 		if elements[i].Path == "" {
-			addError(outcome, "invalid", "Element has an empty path", parentPath, "")
+			addOperationOutcome(outcome, "invalid", "Element has an empty path", parentPath, "Path is empty", "error")
 			continue
 		}
 
@@ -101,7 +101,7 @@ func ValidateResource(data map[string]interface{}) (*OperationOutcome, error) {
 	if !contains(FhirR4ResourceTypes, resourceType) {
 		// stringify the resource types
 		resourceTypes := strings.Join(FhirR4ResourceTypes, ", ")
-		addError(outcome, "error", fmt.Sprintf("Invalid resource type '%s'. Expected one of: %s", resourceType, resourceTypes), "", "")
+		addOperationOutcome(outcome, "error", fmt.Sprintf("Invalid resource type '%s'. Expected one of: %s", resourceType, resourceTypes), "", "Invalid resource type", "error")
 		return outcome, nil
 	}
 
@@ -121,14 +121,34 @@ func ValidateResource(data map[string]interface{}) (*OperationOutcome, error) {
 
 	//response, err := FhirPathValidator(rootData, data, constraint.Expression)
 
-	_, err = FhirPathValidatorMultiple(payload)
+	results, trace, err := FhirPathValidatorMultiple(payload)
 
 	if err != nil {
 		fmt.Printf("Error validating constraint %s\n", err)
 	}
 
-	if len(outcome.Issue) == 0 {
-		addError(outcome, "information", "Validation successful", "", "")
+	fmt.Printf("Results: %v\n", results)
+	fmt.Printf("Trace: %v\n", trace)
+
+	if len(outcome.Issue) == 0 && len(*results) == 0 {
+		addOperationOutcome(outcome, "information", "Validation successful", "", "", "information")
+	} else {
+		for i := 0; i < len(*results); i++ {
+			diagnostics := fmt.Sprintf("Failed constraint '%s'", (*results)[i].Key)
+			code := "invariant"
+			details := fmt.Sprintf("%s: %s", (*results)[i].Key, (*results)[i].Human)
+			if (*results)[i].Source != "" {
+				diagnostics = fmt.Sprintf("Failed constraint '%s' (source: %s)", (*results)[i].Key, (*results)[i].Source)
+			}
+
+			if (*results)[i].Key == "dom-6" {
+				diagnostics = fmt.Sprintf("Failed constraint '%s' (source: %s)", (*results)[i].Key, (*results)[i].Source)
+				code = "informational"
+
+			}
+			// generate better response "Failed constraint '%s'" if (*results)[i].Source is present, use it
+			addOperationOutcome(outcome, code, diagnostics, (*results)[i].Path, details, (*results)[i].Severity)
+		}
 	}
 
 	return outcome, nil
@@ -140,6 +160,8 @@ type FhirPathPayload struct {
 	ConstraintExpression string                 `json:"constraintExpression"`
 	ConstraintKey        string                 `json:"constraintKey"`
 	ConstraintHuman      string                 `json:"constraintHuman"`
+	ConstraintSeverity   string                 `json:"constraintSeverity"`
+	ConstraintSource     string                 `json:"constraintSource"`
 	ParentPath           string                 `json:"parentPath"`
 }
 
@@ -195,6 +217,8 @@ func Validate(rootData map[string]interface{}, data map[string]interface{}, root
 			ConstraintExpression: constraint.Expression,
 			ConstraintKey:        constraint.Key,
 			ConstraintHuman:      constraint.Human,
+			ConstraintSeverity:   constraint.Severity,
+			ConstraintSource:     constraint.Source,
 			ParentPath:           parentPath,
 		})
 
@@ -209,11 +233,11 @@ func Validate(rootData map[string]interface{}, data map[string]interface{}, root
 			}
 
 			if !response.IsValid {
-				addError(outcome, "invalid", fmt.Sprintf("Field '%s' does not meet constraint '%s'", parentPath, constraint.Key), constraint.Expression, constraint.Human)
+				addOperationOutcome(outcome, "invalid", fmt.Sprintf("Field '%s' does not meet constraint '%s'", parentPath, constraint.Key), constraint.Expression, constraint.Human)
 
 				if len(response.Urls) > 0 || len(response.Ids) > 0 {
 					fmt.Printf("Constraint '%s' failed for field '%s'. URLs: %v, IDs: %v\n", constraint.Key, parentPath, response.Urls, response.Ids)
-					addError(outcome, "invalid", fmt.Sprintf("Constraint '%s' failed for field '%s'. URLs: %v, IDs: %v", constraint.Key, parentPath, response.Urls, response.Ids), constraint.Expression, "")
+					addOperationOutcome(outcome, "invalid", fmt.Sprintf("Constraint '%s' failed for field '%s'. URLs: %v, IDs: %v", constraint.Key, parentPath, response.Urls, response.Ids), constraint.Expression, "")
 				}
 			}
 
@@ -281,7 +305,7 @@ func ValidateElement(rootData map[string]interface{}, data map[string]interface{
 
 	if childData == nil {
 		if element.Min > 0 {
-			addError(outcome, "required", fmt.Sprintf("Field '%s' is required", fullPath), fullPath, "")
+			addOperationOutcome(outcome, "required", fmt.Sprintf("Field '%s' is required", fullPath), fullPath, "Field is required", "error")
 		}
 		return
 	}
@@ -316,7 +340,7 @@ func ValidateArray(
 	// Ensure the value is an array
 	array, ok := value.([]interface{})
 	if !ok {
-		addError(outcome, "invalid", fmt.Sprintf("Field '%s' must be an array", fullPath), fullPath, "")
+		addOperationOutcome(outcome, "invalid", fmt.Sprintf("Field '%s' must be an array", fullPath), fullPath, "Field must be an array", "error")
 		return
 	}
 
@@ -324,13 +348,13 @@ func ValidateArray(
 
 	// Validate minItems
 	if length < element.Min {
-		addError(outcome, "required", fmt.Sprintf("Field '%s' has too few items: minimum is %d. Found %d elements", fullPath, element.Min, length), fullPath, "")
+		addOperationOutcome(outcome, "required", fmt.Sprintf("Field '%s' has too few items: minimum is %d. Found %d elements", fullPath, element.Min, length), fullPath, "Field has too few items", "error")
 	}
 
 	// Validate maxItems
 	maxItems, isUnlimited := ParseMaxItems(element.Max)
 	if !isUnlimited && length > maxItems {
-		addError(outcome, "invalid", fmt.Sprintf("Field '%s' has too many items: maximum is %d. Found %d elements", fullPath, maxItems, length), fullPath, "")
+		addOperationOutcome(outcome, "invalid", fmt.Sprintf("Field '%s' has too many items: maximum is %d. Found %d elements", fullPath, maxItems, length), fullPath, "Field has too many items", "error")
 	}
 
 	// Validate each element in the array
@@ -343,7 +367,7 @@ func ValidateArray(
 		case string, map[string]interface{}:
 			ValidateField(rootData, v, element, itemPath, rootSpec, spec, outcome, true)
 		default:
-			addError(outcome, "invalid", fmt.Sprintf("Field '%s' must be a single value", fullPath), fullPath, "")
+			addOperationOutcome(outcome, "invalid", fmt.Sprintf("Field '%s' must be a single value", fullPath), fullPath, "Field must be a single value", "error")
 		}
 	}
 }
@@ -360,13 +384,13 @@ func ValidateValue(
 ) {
 
 	if value == nil {
-		addError(outcome, "invalid", fmt.Sprintf("All children of '%s' must be present", fullPath), fullPath, "")
+		addOperationOutcome(outcome, "invalid", fmt.Sprintf("All children of '%s' must be present", fullPath), fullPath, "Field must be present", "error")
 		return
 	}
 
 	switch v := value.(type) {
 	case []interface{}:
-		addError(outcome, "invalid", fmt.Sprintf("Field '%s' must be a single value", fullPath), fullPath, "")
+		addOperationOutcome(outcome, "invalid", fmt.Sprintf("Field '%s' must be a single value", fullPath), fullPath, "Field must be a single value", "error")
 	case map[string]interface{}:
 		// Validate nested object
 		ValidateComplexType(rootData, v, element.Type[0].Code, fullPath, rootSpec, spec, outcome)
@@ -385,14 +409,14 @@ func ValidateComplexType(rootData map[string]interface{}, value interface{}, typ
 	// Load the structure definition for the type
 	nestedSpec, found := definitions.Load(typeCode)
 	if !found {
-		addError(outcome, "invalid", fmt.Sprintf("No structure definition found for type '%s'", typeCode), path, "")
+		addOperationOutcome(outcome, "invalid", fmt.Sprintf("No structure definition found for type '%s'", typeCode), path, "No structure definition found", "error")
 		return
 	}
 
 	// Ensure correct type assertion
 	specDefinition, valid := nestedSpec.(StructureDefinition)
 	if !valid {
-		addError(outcome, "invalid", fmt.Sprintf("Invalid structure definition for type '%s'", typeCode), path, "")
+		addOperationOutcome(outcome, "invalid", fmt.Sprintf("Invalid structure definition for type '%s'", typeCode), path, "Invalid structure definition", "error")
 		return
 	}
 
@@ -408,14 +432,14 @@ func ValidatePrimitiveType(value string, typeCode, path string, rootSpec Structu
 
 	definition, found := definitions.Load(typeCode)
 	if !found {
-		addError(outcome, "invalid", fmt.Sprintf("No definition found for type '%s'", typeCode), path, "")
+		addOperationOutcome(outcome, "invalid", fmt.Sprintf("No definition found for type '%s'", typeCode), path, "No definition found", "error")
 		return
 	}
 
 	// Extract the value element definition from the snapshot
 	var valueElement *Element
 	if valueElement = ExtractValueElementID(definition.(StructureDefinition).ID, definition.(StructureDefinition).Snapshot); valueElement == nil {
-		addError(outcome, "invalid", fmt.Sprintf("No value element found for '%s'", path), path, "")
+		addOperationOutcome(outcome, "invalid", fmt.Sprintf("No value element found for '%s'", path), path, "No value element found", "error")
 		return
 	}
 
@@ -428,7 +452,7 @@ func ValidatePrimitiveType(value string, typeCode, path string, rootSpec Structu
 		if fhirType == "string" {
 			regex = "[ \\r\\n\\t\\S]+" // Default regex for string
 		} else {
-			addError(outcome, "invalid", fmt.Sprintf("No regex pattern found for '%s'", path), path, "")
+			addOperationOutcome(outcome, "invalid", fmt.Sprintf("No regex pattern found for '%s'", path), path, "No regex pattern found", "error")
 			return
 		}
 	}
@@ -443,7 +467,7 @@ func ValidateRegex(value string, regex string, path string, outcome *OperationOu
 	strValue := fmt.Sprintf("%v", value)
 
 	if !re.MatchString(strValue) {
-		addError(outcome, "invalid", fmt.Sprintf("Field '%s' does not match the expected pattern: %s", path, regex), path, "")
+		addOperationOutcome(outcome, "invalid", fmt.Sprintf("Field '%s' does not match the expected pattern: %s", path, regex), path, "Field does not match the expected pattern", "error")
 	}
 
 }

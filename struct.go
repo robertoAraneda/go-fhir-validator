@@ -78,12 +78,12 @@ type OperationOutcome struct {
 
 // IssueEntry represents an individual issue in OperationOutcome
 type IssueEntry struct {
-	Severity    string          `json:"severity"` // "error", "warning", etc.
-	Code        string          `json:"code"`     // "invalid", "required", etc.
-	Details     CodeableConcept `json:"details"`
-	Diagnostics string          `json:"diagnostics"`          // Additional diagnostic information
-	Expression  []string        `json:"expression,omitempty"` // FHIRPath expression
-	Location    string          `json:"location,omitempty"`   // Path to the field causing the issue
+	Severity    string           `json:"severity"` // "error", "warning", etc.
+	Code        string           `json:"code"`     // "invalid", "required", etc.
+	Details     *CodeableConcept `json:"details,omitempty"`
+	Diagnostics string           `json:"diagnostics,omitempty"` // Additional diagnostic information
+	Expression  []string         `json:"expression,omitempty"`  // FHIRPath expression
+	Location    string           `json:"location,omitempty"`    // Path to the field causing the issue
 }
 
 // Concept representa un concepto en el CodeSystem
@@ -210,6 +210,7 @@ type Constraint struct {
 	Human      string `json:"human"`
 	Expression string `json:"expression"`
 	XPath      string `json:"xpath"`
+	Source     string `json:"source"`
 }
 
 type ElementMapping struct {
