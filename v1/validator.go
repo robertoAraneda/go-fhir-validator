@@ -3,6 +3,7 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -51,6 +52,12 @@ var extensions sync.Map
 var definitions sync.Map
 
 func load() {
+	// print current path
+	path, err := os.Getwd()
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Println(path)
 	// List of directory-storage mappings
 	mappings := []struct {
 		dir     string
