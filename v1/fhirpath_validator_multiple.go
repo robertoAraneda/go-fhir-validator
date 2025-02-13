@@ -1,4 +1,4 @@
-package main
+package v1
 
 import (
 	"bytes"
@@ -59,7 +59,7 @@ func FhirPathValidatorMultiple(array []FhirPathPayload) (*[]ValidationResult, *T
 		return nil, nil, err
 	}
 
-	path := filepath.Join("node/dist", "fhirpath-evaluate.js")
+	path := filepath.Join("v1/node/dist", "fhirpath-evaluate.js")
 
 	// Step 3: Execute the Node.js script
 	cmd := exec.Command("node", path, string(resourceJSON))

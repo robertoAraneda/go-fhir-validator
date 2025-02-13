@@ -1,9 +1,10 @@
-package main
+package v1
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -55,8 +56,15 @@ func LoadDefinition(filePath string) (interface{}, error) {
 	}
 }
 
-// readJSONFile reads and parses a JSON file into a map
-func readJSONFile(filename string) (map[string]interface{}, error) {
+// ReadJSONFile reads and parses a JSON file into a map
+func ReadJSONFile(filename string) (map[string]interface{}, error) {
+	// print current path
+	path, err := os.Getwd()
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Println(path)
+
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("error opening file: %v", err)
