@@ -1,4 +1,4 @@
-package main
+package v1
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 // FhirR4ResourceTypes contains all resource types in FHIR R4.
@@ -40,6 +41,35 @@ var FhirR4ResourceTypes = []string{
 	"SubstanceSourceMaterial", "SubstanceSpecification", "SupplyDelivery", "SupplyRequest", "Task",
 	"TerminologyCapabilities", "TestReport", "TestScript", "ValueSet", "VerificationResult",
 	"VisionPrescription",
+}
+
+var datatypes sync.Map
+var resources sync.Map
+var codesystems sync.Map
+var valuesets sync.Map
+var extensions sync.Map
+var definitions sync.Map
+
+func load() {
+	// List of directory-storage mappings
+	mappings := []struct {
+		dir     string
+		storage *sync.Map
+	}{
+		{"v1/datatypes", &definitions},
+		{"v1/datatypes", &datatypes},
+		{"v1/resources", &definitions},
+		{"v1/resources", &resources},
+		{"v1/extensions", &definitions},
+		{"v1/extensions", &extensions},
+		{"v1/codesystems", &codesystems},
+		{"v1/valuesets", &valuesets},
+	}
+
+	// Load definitions for each mapping
+	for _, mapping := range mappings {
+		LoadDefinitions(mapping.dir, mapping.storage)
+	}
 }
 
 // addOperationOutcome appends an issue to the OperationOutcome, with optional details about the incoming value type
@@ -88,6 +118,10 @@ func validateElements(
 }
 
 func ValidateResource(data map[string]interface{}) (*OperationOutcome, error) {
+
+	// Load the FHIR definitions
+	load()
+
 	outcome := &OperationOutcome{ResourceType: "OperationOutcome"}
 
 	// extract the resource type
