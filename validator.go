@@ -125,6 +125,8 @@ func ValidateResource(data map[string]interface{}) (*OperationOutcome, error) {
 
 	if err != nil {
 		fmt.Printf("Error validating constraint %s\n", err)
+		addOperationOutcome(outcome, "exception", fmt.Sprintf("Error validating constraint %s", err), "", "", "fatal")
+		return outcome, nil
 	}
 
 	fmt.Printf("Results: %v\n", results)
@@ -157,6 +159,7 @@ func ValidateResource(data map[string]interface{}) (*OperationOutcome, error) {
 type FhirPathPayload struct {
 	RootData             map[string]interface{} `json:"rootData"`
 	Data                 map[string]interface{} `json:"data"`
+	Path                 string                 `json:"path"`
 	ConstraintExpression string                 `json:"constraintExpression"`
 	ConstraintKey        string                 `json:"constraintKey"`
 	ConstraintHuman      string                 `json:"constraintHuman"`
@@ -192,26 +195,22 @@ func Validate(rootData map[string]interface{}, data map[string]interface{}, root
 
 	// find the constraints in the spec.Snapshot.Element when id is equal to spec.ID
 
-	ele, matchingError := findMatchingElement(spec)
-	if matchingError != nil {
-		fmt.Printf("Error finding matching element %s\n", matchingError)
-		return
-	}
+	constraints, _ := findMatchingElementDos(data, spec)
 
-	if ele.Constraint == nil || len(ele.Constraint) == 0 {
-		fmt.Printf("No constraints found for element: %s\n", ele.ID)
-		return
-	}
+	// Map to track unique payload entries (key: constraintKey + parentPath)
+	payloadSet := make(map[string]bool)
 
-	for i := 0; i < len(ele.Constraint); i++ {
-		constraint := ele.Constraint[i]
-		var excludeFields = []string{"ele-1", "txt-1", "txt-2"}
+	// TODO: fix this not getting all constrains for all elements.
+	for i := 0; i < len(*constraints); i++ {
+		constraint := (*constraints)[i]
 
-		if contains(excludeFields, constraint.Key) {
-			continue
+		payloadKey := fmt.Sprintf("%s|%s", constraint.Key, parentPath)
+		if _, exists := payloadSet[payloadKey]; exists {
+			continue // Skip duplicates
 		}
+		payloadSet[payloadKey] = true
 
-		payload = append(payload, FhirPathPayload{
+		var item = FhirPathPayload{
 			RootData:             rootData,
 			Data:                 data,
 			ConstraintExpression: constraint.Expression,
@@ -220,28 +219,9 @@ func Validate(rootData map[string]interface{}, data map[string]interface{}, root
 			ConstraintSeverity:   constraint.Severity,
 			ConstraintSource:     constraint.Source,
 			ParentPath:           parentPath,
-		})
+		}
 
-		//response, err := FhirPathValidator(rootData, data, constraint.Expression)
-
-		/*
-			response, err := FhirPathValidatorMultiple(payload)
-
-			if err != nil {
-				fmt.Printf("Error validating constraint %s\n", err)
-				continue
-			}
-
-			if !response.IsValid {
-				addOperationOutcome(outcome, "invalid", fmt.Sprintf("Field '%s' does not meet constraint '%s'", parentPath, constraint.Key), constraint.Expression, constraint.Human)
-
-				if len(response.Urls) > 0 || len(response.Ids) > 0 {
-					fmt.Printf("Constraint '%s' failed for field '%s'. URLs: %v, IDs: %v\n", constraint.Key, parentPath, response.Urls, response.Ids)
-					addOperationOutcome(outcome, "invalid", fmt.Sprintf("Constraint '%s' failed for field '%s'. URLs: %v, IDs: %v", constraint.Key, parentPath, response.Urls, response.Ids), constraint.Expression, "")
-				}
-			}
-
-		*/
+		payload = append(payload, item)
 	}
 }
 
@@ -289,6 +269,54 @@ func findMatchingElement(spec StructureDefinition) (*Element, error) {
 	}
 
 	return nil, fmt.Errorf("Element not found")
+}
+
+func findMatchingElementDos(data map[string]interface{}, spec StructureDefinition) (*[]Constraint, error) {
+	fmt.Printf("Finding constraints for %s\n", spec.ID)
+	fmt.Printf("Data: %v\n", data)
+	var constraints []Constraint
+	// Iterate over the keys in the data map
+	for key := range data {
+		// Construct the expected ID to match with spec elements
+		expectedID := spec.ID + "." + key
+
+		// Search for a match in the spec's Snapshot.Element array
+		for _, element := range spec.Snapshot.Element {
+
+			if spec.ID == element.ID {
+				fmt.Printf("Element %s\n", element.ID)
+				for _, constraint := range element.Constraint {
+					var skippedKeys = []string{"txt-1", "txt-2", "ele-1"}
+					if contains(skippedKeys, constraint.Key) {
+						continue
+					}
+
+					fmt.Printf("Constraint %s\n", constraint.Key)
+
+					constraints = append(constraints, constraint)
+				}
+			}
+
+			if element.ID == expectedID {
+				fmt.Println("Element found")
+				fmt.Printf("Element %s\n", element.ID)
+				for _, constraint := range element.Constraint {
+					var skippedKeys = []string{"txt-1", "txt-2", "ele-1"}
+					if contains(skippedKeys, constraint.Key) {
+						continue
+					}
+
+					fmt.Printf("Constraint %s\n", constraint.Key)
+
+					constraints = append(constraints, constraint)
+				}
+
+				break
+			}
+		}
+	}
+
+	return &constraints, fmt.Errorf("no constraints found")
 }
 
 // ValidateElement validates a single element against the specification

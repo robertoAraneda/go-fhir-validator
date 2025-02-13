@@ -87,6 +87,7 @@ func FhirPathValidatorMultiple(array []FhirPathPayload) (*[]ValidationResult, *T
 
 	if len(matches) < 2 {
 		fmt.Println("No 'Result' array found in input.")
+		return nil, nil, fmt.Errorf("no 'Result' array found in input")
 	}
 
 	resultJSON := matches[1]
@@ -96,6 +97,7 @@ func FhirPathValidatorMultiple(array []FhirPathPayload) (*[]ValidationResult, *T
 	err = json.Unmarshal([]byte(resultJSON), &results)
 	if err != nil {
 		fmt.Println("Error parsing JSON:", err)
+		return nil, nil, fmt.Errorf("error parsing JSON: %w", err)
 	}
 
 	// Filter only results where "result" is false

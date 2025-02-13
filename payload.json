@@ -36,12 +36,17 @@
           ]
         }
       ],
-      "resourceType": "Patient"
+      "resourceType": "Patient",
+      "text": {
+        "div": "\u003cdiv xmlns=\"http://www.w3.org/1999/xhtml\"\u003e\n      \n      \u003cp\u003eHenry Levin the 7th\u003c/p\u003e\n    \n    \u003c/div\u003e",
+        "status": "generated"
+      }
     },
     "data": {
       "end": "2014-02-01",
       "start": "2025-05-06"
     },
+    "path": "",
     "constraintExpression": "start.hasValue().not() or end.hasValue().not() or (start \u003c= end)",
     "constraintKey": "per-1",
     "constraintHuman": "If present, start SHALL have a lower value than end",
@@ -86,12 +91,17 @@
           ]
         }
       ],
-      "resourceType": "Patient"
+      "resourceType": "Patient",
+      "text": {
+        "div": "\u003cdiv xmlns=\"http://www.w3.org/1999/xhtml\"\u003e\n      \n      \u003cp\u003eHenry Levin the 7th\u003c/p\u003e\n    \n    \u003c/div\u003e",
+        "status": "generated"
+      }
     },
     "data": {
       "display": "Good Health Clinic",
       "reference": "Organization/2.16.840.1.113883.19.5"
     },
+    "path": "",
     "constraintExpression": "reference.startsWith('#').not() or (reference.substring(1).trace('url') in %rootResource.contained.id.trace('ids'))",
     "constraintKey": "ref-1",
     "constraintHuman": "SHALL have a contained resource if a local reference is provided",
@@ -136,7 +146,11 @@
           ]
         }
       ],
-      "resourceType": "Patient"
+      "resourceType": "Patient",
+      "text": {
+        "div": "\u003cdiv xmlns=\"http://www.w3.org/1999/xhtml\"\u003e\n      \n      \u003cp\u003eHenry Levin the 7th\u003c/p\u003e\n    \n    \u003c/div\u003e",
+        "status": "generated"
+      }
     },
     "data": {
       "active": true,
@@ -174,8 +188,13 @@
           ]
         }
       ],
-      "resourceType": "Patient"
+      "resourceType": "Patient",
+      "text": {
+        "div": "\u003cdiv xmlns=\"http://www.w3.org/1999/xhtml\"\u003e\n      \n      \u003cp\u003eHenry Levin the 7th\u003c/p\u003e\n    \n    \u003c/div\u003e",
+        "status": "generated"
+      }
     },
+    "path": "",
     "constraintExpression": "contained.contained.empty()",
     "constraintKey": "dom-2",
     "constraintHuman": "If the resource is contained in another resource, it SHALL NOT contain nested Resources",
@@ -220,7 +239,11 @@
           ]
         }
       ],
-      "resourceType": "Patient"
+      "resourceType": "Patient",
+      "text": {
+        "div": "\u003cdiv xmlns=\"http://www.w3.org/1999/xhtml\"\u003e\n      \n      \u003cp\u003eHenry Levin the 7th\u003c/p\u003e\n    \n    \u003c/div\u003e",
+        "status": "generated"
+      }
     },
     "data": {
       "active": true,
@@ -258,8 +281,13 @@
           ]
         }
       ],
-      "resourceType": "Patient"
+      "resourceType": "Patient",
+      "text": {
+        "div": "\u003cdiv xmlns=\"http://www.w3.org/1999/xhtml\"\u003e\n      \n      \u003cp\u003eHenry Levin the 7th\u003c/p\u003e\n    \n    \u003c/div\u003e",
+        "status": "generated"
+      }
     },
+    "path": "",
     "constraintExpression": "contained.where((('#'+id in (%resource.descendants().reference | %resource.descendants().as(canonical) | %resource.descendants().as(uri) | %resource.descendants().as(url))) or descendants().where(reference = '#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = '#').exists()).not()).trace('unmatched', id).empty()",
     "constraintKey": "dom-3",
     "constraintHuman": "If the resource is contained in another resource, it SHALL be referred to from elsewhere in the resource or SHALL refer to the containing resource",
@@ -304,7 +332,11 @@
           ]
         }
       ],
-      "resourceType": "Patient"
+      "resourceType": "Patient",
+      "text": {
+        "div": "\u003cdiv xmlns=\"http://www.w3.org/1999/xhtml\"\u003e\n      \n      \u003cp\u003eHenry Levin the 7th\u003c/p\u003e\n    \n    \u003c/div\u003e",
+        "status": "generated"
+      }
     },
     "data": {
       "active": true,
@@ -342,8 +374,13 @@
           ]
         }
       ],
-      "resourceType": "Patient"
+      "resourceType": "Patient",
+      "text": {
+        "div": "\u003cdiv xmlns=\"http://www.w3.org/1999/xhtml\"\u003e\n      \n      \u003cp\u003eHenry Levin the 7th\u003c/p\u003e\n    \n    \u003c/div\u003e",
+        "status": "generated"
+      }
     },
+    "path": "",
     "constraintExpression": "contained.meta.versionId.empty() and contained.meta.lastUpdated.empty()",
     "constraintKey": "dom-4",
     "constraintHuman": "If a resource is contained in another resource, it SHALL NOT have a meta.versionId or a meta.lastUpdated",
@@ -388,7 +425,11 @@
           ]
         }
       ],
-      "resourceType": "Patient"
+      "resourceType": "Patient",
+      "text": {
+        "div": "\u003cdiv xmlns=\"http://www.w3.org/1999/xhtml\"\u003e\n      \n      \u003cp\u003eHenry Levin the 7th\u003c/p\u003e\n    \n    \u003c/div\u003e",
+        "status": "generated"
+      }
     },
     "data": {
       "active": true,
@@ -426,8 +467,13 @@
           ]
         }
       ],
-      "resourceType": "Patient"
+      "resourceType": "Patient",
+      "text": {
+        "div": "\u003cdiv xmlns=\"http://www.w3.org/1999/xhtml\"\u003e\n      \n      \u003cp\u003eHenry Levin the 7th\u003c/p\u003e\n    \n    \u003c/div\u003e",
+        "status": "generated"
+      }
     },
+    "path": "",
     "constraintExpression": "contained.meta.security.empty()",
     "constraintKey": "dom-5",
     "constraintHuman": "If a resource is contained in another resource, it SHALL NOT have a security label",
@@ -472,7 +518,11 @@
           ]
         }
       ],
-      "resourceType": "Patient"
+      "resourceType": "Patient",
+      "text": {
+        "div": "\u003cdiv xmlns=\"http://www.w3.org/1999/xhtml\"\u003e\n      \n      \u003cp\u003eHenry Levin the 7th\u003c/p\u003e\n    \n    \u003c/div\u003e",
+        "status": "generated"
+      }
     },
     "data": {
       "active": true,
@@ -510,8 +560,13 @@
           ]
         }
       ],
-      "resourceType": "Patient"
+      "resourceType": "Patient",
+      "text": {
+        "div": "\u003cdiv xmlns=\"http://www.w3.org/1999/xhtml\"\u003e\n      \n      \u003cp\u003eHenry Levin the 7th\u003c/p\u003e\n    \n    \u003c/div\u003e",
+        "status": "generated"
+      }
     },
+    "path": "",
     "constraintExpression": "text.`div`.exists()",
     "constraintKey": "dom-6",
     "constraintHuman": "A resource should have narrative for robust management",

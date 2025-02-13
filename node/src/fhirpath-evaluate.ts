@@ -32,8 +32,11 @@ try {
     const resources: Bundle[] = JSON.parse(inputJSON);
     const accumulator: ResponseBundle[] = [];
 
+
     for (const bundle of resources) {
         let result: boolean[] = [];
+        const resourceType = bundle.data.resourceType as string;
+        console.log("parentPath:", bundle.parentPath);
 
         if (bundle.constraintExpression.startsWith("contained.where(")) {
             bundle.constraintExpression = `
@@ -42,14 +45,14 @@ contained.where((('#'+id in (%resource.descendants().reference | %resource.desce
 
             result = fhirpath.evaluate(
                 bundle.data,
-                bundle.constraintExpression,
+                resourceType ? bundle.constraintExpression : { base: bundle.parentPath, expression: bundle.constraintExpression },
                 { resource: bundle.rootData },
                 fhirpath_r4_model
             ) as boolean[];
         } else {
             result = fhirpath.evaluate(
                 bundle.data,
-                bundle.constraintExpression,
+                resourceType ? bundle.constraintExpression : { base: bundle.parentPath, expression: bundle.constraintExpression },
                 { rootResource: bundle.rootData },
                 fhirpath_r4_model
             ) as boolean[];
@@ -68,5 +71,5 @@ contained.where((('#'+id in (%resource.descendants().reference | %resource.desce
     console.log("Result:", JSON.stringify(accumulator, null, 2));
 } catch (error: any) {
     console.error("Error:", error.message);
-    process.exit(1);
+    //process.exit(1);
 }
