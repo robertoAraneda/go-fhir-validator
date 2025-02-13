@@ -18,10 +18,12 @@ type ResponseFhirPathValidatorMultiple struct {
 }
 
 type ValidationResult struct {
-	Result bool   `json:"result"`
-	Key    string `json:"key"`
-	Path   string `json:"path"`
-	Human  string `json:"human"`
+	Result   bool   `json:"result"`
+	Key      string `json:"key"`
+	Path     string `json:"path"`
+	Human    string `json:"human"`
+	Source   string `json:"source"`
+	Severity string `json:"severity"`
 }
 
 // TraceData estructura para almacenar los valores de TRACE
@@ -48,16 +50,16 @@ func cleanValues(raw []string) []string {
 	return result
 }
 
-func FhirPathValidatorMultiple(array []FhirPathPayload) (*interface{}, error) {
+func FhirPathValidatorMultiple(array []FhirPathPayload) (*[]ValidationResult, *TraceData, error) {
 
 	// Convert the FHIR resource to JSON
 	resourceJSON, err := json.Marshal(array)
 	if err != nil {
 		log.Fatalf("Error converting resource to JSON: %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
-	path := filepath.Join("node", "fhirpath_multiple.js")
+	path := filepath.Join("node/dist", "fhirpath-evaluate.js")
 
 	// Step 3: Execute the Node.js script
 	cmd := exec.Command("node", path, string(resourceJSON))
@@ -71,7 +73,7 @@ func FhirPathValidatorMultiple(array []FhirPathPayload) (*interface{}, error) {
 	err = cmd.Run()
 	if err != nil {
 		fmt.Printf("Node.js error: %s\n", stderr.String())
-		return nil, fmt.Errorf("execution error: %w", err)
+		return nil, nil, fmt.Errorf("execution error: %w", err)
 	}
 
 	// Debug: Print raw output
@@ -85,6 +87,7 @@ func FhirPathValidatorMultiple(array []FhirPathPayload) (*interface{}, error) {
 
 	if len(matches) < 2 {
 		fmt.Println("No 'Result' array found in input.")
+		return nil, nil, fmt.Errorf("no 'Result' array found in input")
 	}
 
 	resultJSON := matches[1]
@@ -94,6 +97,7 @@ func FhirPathValidatorMultiple(array []FhirPathPayload) (*interface{}, error) {
 	err = json.Unmarshal([]byte(resultJSON), &results)
 	if err != nil {
 		fmt.Println("Error parsing JSON:", err)
+		return nil, nil, fmt.Errorf("error parsing JSON: %w", err)
 	}
 
 	// Filter only results where "result" is false
@@ -139,61 +143,5 @@ func FhirPathValidatorMultiple(array []FhirPathPayload) (*interface{}, error) {
 		}
 	}
 
-	// Convertir a JSON para mostrarlo de forma estructurada
-	traceJSON, _ := json.MarshalIndent(trace, "", "  ")
-	fmt.Println("Extracted TRACE Data:")
-	fmt.Println(string(traceJSON))
-
-	/*
-		re := regexp.MustCompile(`\[(true|false)\]\s*$`)
-		matches := re.FindString(rawOutput)
-
-		// Parse JSON response
-		var result []bool
-		err = json.Unmarshal([]byte(matches), &result)
-		if err != nil {
-			return nil, fmt.Errorf("JSON parsing error: %w\nRaw Output: %s", err, rawOutput)
-		}
-
-		// Regular expressions for TRACE:[url] and TRACE:[ids]
-		urlRegex := regexp.MustCompile(`(?m)TRACE:\[url\]\s*\[\s*([\s\S]*?)\s*\]`)
-		idsRegex := regexp.MustCompile(`(?m)TRACE:\[ids\]\s*\[\s*([\s\S]*?)\s*\]`)
-
-		// Extract URL and IDs from the output
-		urlMatches := urlRegex.FindStringSubmatch(rawOutput)
-		idsMatches := idsRegex.FindStringSubmatch(rawOutput)
-
-		// Helper function to clean up extracted values
-		cleanValues := func(match []string) []string {
-			if len(match) < 2 {
-				return nil
-			}
-
-			// Remove unnecessary newlines and split by commas
-			rawValues := strings.Split(strings.ReplaceAll(match[1], "\n", ""), ",")
-			var result []string
-			for _, v := range rawValues {
-				cleaned := strings.TrimSpace(v)
-				cleaned = strings.Trim(cleaned, `"\`)
-				result = append(result, cleaned)
-			}
-			return result
-		}
-
-		urlValues := cleanValues(urlMatches)
-
-		fmt.Printf("URL Values: %v\n", urlValues)
-		idsValues := cleanValues(idsMatches)
-
-		fmt.Printf("IDs Values: %v\n", idsValues)
-
-		return &ResponseFhirPathValidator{
-			IsValid: result[0],
-			Urls:    urlValues,
-			Ids:     idsValues,
-		}, nil
-
-	*/
-
-	return nil, nil
+	return &failedResults, &trace, nil
 }

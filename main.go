@@ -49,7 +49,6 @@ func main() {
 		return
 	}
 
-	fmt.Println("Validation failed:")
 	outcomeJSON, _ := json.MarshalIndent(outcome, "", "  ")
 	fmt.Println(string(outcomeJSON))
 }
