@@ -3,11 +3,9 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"regexp"
 	"strings"
-	"sync"
 )
 
 // FhirR4ResourceTypes contains all resource types in FHIR R4.
@@ -42,41 +40,6 @@ var FhirR4ResourceTypes = []string{
 	"SubstanceSourceMaterial", "SubstanceSpecification", "SupplyDelivery", "SupplyRequest", "Task",
 	"TerminologyCapabilities", "TestReport", "TestScript", "ValueSet", "VerificationResult",
 	"VisionPrescription",
-}
-
-var datatypes sync.Map
-var resources sync.Map
-var codesystems sync.Map
-var valuesets sync.Map
-var extensions sync.Map
-var definitions sync.Map
-
-func Load() {
-	// print current path
-	path, err := os.Getwd()
-	if err != nil {
-		log.Println(err)
-	}
-	fmt.Println(path)
-	// List of directory-storage mappings
-	mappings := []struct {
-		dir     string
-		storage *sync.Map
-	}{
-		{"v1/datatypes", &definitions},
-		{"v1/datatypes", &datatypes},
-		{"v1/resources", &definitions},
-		{"v1/resources", &resources},
-		{"v1/extensions", &definitions},
-		{"v1/extensions", &extensions},
-		{"v1/codesystems", &codesystems},
-		{"v1/valuesets", &valuesets},
-	}
-
-	// Load definitions for each mapping
-	for _, mapping := range mappings {
-		LoadDefinitions(mapping.dir, mapping.storage)
-	}
 }
 
 // addOperationOutcome appends an issue to the OperationOutcome, with optional details about the incoming value type
@@ -143,7 +106,7 @@ func ValidateResource(data map[string]interface{}) (*OperationOutcome, error) {
 		return outcome, nil
 	}
 
-	spec, ok := resources.Load(resourceType)
+	spec, ok := specLibraryData.Config[resourceType]
 	if !ok {
 		return nil, fmt.Errorf("resource type '%s' not found in definitions", resourceType)
 	}
@@ -157,7 +120,7 @@ func ValidateResource(data map[string]interface{}) (*OperationOutcome, error) {
 		fmt.Printf("Error writing payload file %s\n", err)
 	}
 
-	//response, err := FhirPathValidator(rootData, data, constraint.Expression)
+	//response, err := FhirPathValidator(rootData, specLibraryData, constraint.Expression)
 
 	results, trace, err := FhirPathValidatorMultiple(payload)
 
@@ -213,7 +176,7 @@ func Validate(rootData map[string]interface{}, data map[string]interface{}, root
 	fmt.Printf("Validating %s, %s, from %s\n", rootSpec.ID, spec.ID, parentPath)
 
 	if len(data) == 0 {
-		return // Exit early if no data to validate
+		return // Exit early if no specLibraryData to validate
 	}
 
 	elements := spec.Snapshot.Element
@@ -229,9 +192,9 @@ func Validate(rootData map[string]interface{}, data map[string]interface{}, root
 	validateElements(rootData, data, topLevelElements, rootSpec, spec, parentPath, outcome, ValidateElement)
 	validateElements(rootData, data, nestedBackboneElements, rootSpec, spec, parentPath, outcome, ValidateBackboneElement)
 	validateElements(rootData, data, elementsWithVariableTypes, rootSpec, spec, parentPath, outcome, ValidateElementWithMultipleTypes)
-	// ValidateUnderscoreFields(rootData, data, parentPath, rootSpec, spec, outcome)
+	// ValidateUnderscoreFields(rootData, specLibraryData, parentPath, rootSpec, specLibraryData, outcome)
 
-	// find the constraints in the spec.Snapshot.Element when id is equal to spec.ID
+	// find the constraints in the specLibraryData.Snapshot.Element when id is equal to specLibraryData.ID
 
 	constraints, _ := findMatchingElementDos(data, spec)
 
@@ -313,12 +276,12 @@ func findMatchingElementDos(data map[string]interface{}, spec StructureDefinitio
 	fmt.Printf("Finding constraints for %s\n", spec.ID)
 	fmt.Printf("Data: %v\n", data)
 	var constraints []Constraint
-	// Iterate over the keys in the data map
+	// Iterate over the keys in the specLibraryData map
 	for key := range data {
-		// Construct the expected ID to match with spec elements
+		// Construct the expected ID to match with specLibraryData elements
 		expectedID := spec.ID + "." + key
 
-		// Search for a match in the spec's Snapshot.Element array
+		// Search for a match in the specLibraryData's Snapshot.Element array
 		for _, element := range spec.Snapshot.Element {
 
 			if spec.ID == element.ID {
@@ -473,7 +436,7 @@ func ValidateValue(
 func ValidateComplexType(rootData map[string]interface{}, value interface{}, typeCode, path string, rootSpec, spec StructureDefinition, outcome *OperationOutcome) {
 
 	// Load the structure definition for the type
-	nestedSpec, found := definitions.Load(typeCode)
+	nestedSpec, found := specLibraryData.Config[typeCode]
 	if !found {
 		addOperationOutcome(outcome, "invalid", fmt.Sprintf("No structure definition found for type '%s'", typeCode), path, "No structure definition found", "error")
 		return
@@ -496,7 +459,7 @@ func ValidatePrimitiveType(value string, typeCode, path string, rootSpec Structu
 		typeCode = "string" // Normalize FHIRPath string type
 	}
 
-	definition, found := definitions.Load(typeCode)
+	definition, found := specLibraryData.Config[typeCode]
 	if !found {
 		addOperationOutcome(outcome, "invalid", fmt.Sprintf("No definition found for type '%s'", typeCode), path, "No definition found", "error")
 		return
