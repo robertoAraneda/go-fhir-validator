@@ -42,6 +42,8 @@ var FhirR4ResourceTypes = []string{
 	"VisionPrescription",
 }
 
+var payload []*FhirPathPayload
+
 // addOperationOutcome appends an issue to the OperationOutcome, with optional details about the incoming value type
 func addOperationOutcome(outcome *OperationOutcome, code, diagnostic, location, details, severity string) {
 	issue := IssueEntry{
@@ -90,6 +92,7 @@ func validateElements(
 func ValidateResource(data map[string]interface{}) (*OperationOutcome, error) {
 
 	outcome := &OperationOutcome{ResourceType: "OperationOutcome"}
+	payload = []*FhirPathPayload{}
 
 	// extract the resource type
 	resourceType, ok := data["resourceType"].(string)
@@ -169,8 +172,6 @@ type FhirPathPayload struct {
 	ParentPath           string                 `json:"parentPath"`
 }
 
-var payload []FhirPathPayload
-
 func Validate(rootData map[string]interface{}, data map[string]interface{}, rootSpec StructureDefinition, spec StructureDefinition, parentPath string, outcome *OperationOutcome) {
 
 	fmt.Printf("Validating %s, %s, from %s\n", rootSpec.ID, spec.ID, parentPath)
@@ -222,7 +223,7 @@ func Validate(rootData map[string]interface{}, data map[string]interface{}, root
 			ParentPath:           parentPath,
 		}
 
-		payload = append(payload, item)
+		payload = append(payload, &item)
 	}
 }
 
