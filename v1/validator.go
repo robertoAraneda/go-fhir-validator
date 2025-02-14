@@ -51,7 +51,7 @@ var valuesets sync.Map
 var extensions sync.Map
 var definitions sync.Map
 
-func load() {
+func Load() {
 	// print current path
 	path, err := os.Getwd()
 	if err != nil {
@@ -125,9 +125,6 @@ func validateElements(
 }
 
 func ValidateResource(data map[string]interface{}) (*OperationOutcome, error) {
-
-	// Load the FHIR definitions
-	load()
 
 	outcome := &OperationOutcome{ResourceType: "OperationOutcome"}
 
