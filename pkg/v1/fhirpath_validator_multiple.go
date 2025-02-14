@@ -50,7 +50,7 @@ func cleanValues(raw []string) []string {
 	return result
 }
 
-func FhirPathValidatorMultiple(array []FhirPathPayload) (*[]ValidationResult, *TraceData, error) {
+func FhirPathValidatorMultiple(array []*FhirPathPayload) (*[]ValidationResult, *TraceData, error) {
 
 	// Convert the FHIR resource to JSON
 	resourceJSON, err := json.Marshal(array)
